@@ -6,11 +6,9 @@ import (
 )
 
 type Deployment struct {
-	Url              string                     `yaml:"url"`
-	Exchanges        map[string]Exchange        `yaml:"exchanges"`
-	Queues           map[string]Queue           `yaml:"queues"`
-	Bindings         map[string]QueueBinding    `yaml:"bindings"`
-	ExchangeBindings map[string]ExchangeBinding `yaml:"exchangeBindings"`
+	Url        string              `yaml:"url"`
+	Exchanges  map[string]Exchange `yaml:"exchanges"`
+	Queues     map[string]Queue    `yaml:"queues"`
 
 	connection *amqp.Connection
 	channel    *amqp.Channel
@@ -36,22 +34,15 @@ func (d *Deployment) Setup() error {
 		}
 	}
 
+	for _, x := range d.Exchanges {
+		err := x.SetupBindings()
+		if err != nil {
+			return err
+		}
+	}
+
 	for name, x := range d.Queues {
 		err := x.Setup(name, d)
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, x := range d.Bindings {
-		err := x.Setup(d)
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, x := range d.ExchangeBindings {
-		err := x.Setup(d)
 		if err != nil {
 			return err
 		}
@@ -60,24 +51,42 @@ func (d *Deployment) Setup() error {
 	return nil
 }
 
-func defName(object, key string) string {
-	if object != "" {
-		return object
+func defName(value, defaultValue string) string {
+	if value != "" {
+		return value
 	}
-	return key
+	return defaultValue
 }
 
 type Exchange struct {
-	Name       string     `yaml:"name"`
-	Kind       string     `yaml:"kind"`
-	Durable    bool       `yaml:"durable"`
-	AutoDelete bool       `yaml:"autoDelete"`
-	Internal   bool       `yaml:"internal"`
-	Args       amqp.Table `yaml:"args"`
+	Name       string              `yaml:"name"`
+	Kind       string              `yaml:"kind"`
+	Durable    bool                `yaml:"durable"`
+	AutoDelete bool                `yaml:"autoDelete"`
+	Internal   bool                `yaml:"internal"`
+	Args       amqp.Table          `yaml:"args"`
+	Bindings   map[string]*Binding `yaml:"bindings"`
+
+	deplyment  *Deployment
 }
 
 func (x *Exchange) Setup(name string, d *Deployment) error {
-	return d.channel.ExchangeDeclare(defName(x.Name, name), x.Kind, x.Durable, x.AutoDelete, x.Internal, false, x.Args)
+	x.deplyment = d
+
+	if x.Name == "" {
+		x.Name = name
+	}
+
+	return d.channel.ExchangeDeclare(x.Name, x.Kind, x.Durable, x.AutoDelete, x.Internal, false, x.Args)
+}
+
+func (x *Exchange) SetupBindings() error {
+	for name, b := range x.Bindings {
+		if err := x.SetupBinding(name, b); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 /*
@@ -86,32 +95,36 @@ func(x *Exchange) Teardown(ch *amqp.Channel) error{
 }
 */
 
-type QueueBinding struct {
-	Destination string     `yaml:"destination"`
-	Key         string     `yaml:"key"`
-	Source      string     `yaml:"source"`
-	Args        amqp.Table `yaml:"args"`
+type Binding struct {
+	Key    string     `yaml:"key"`
+	Source string     `yaml:"source"`
+	Args   amqp.Table `yaml:"args"`
 }
 
-func (b *QueueBinding) Setup(d *Deployment) error {
-	return d.channel.QueueBind(b.Destination, b.Key, b.Source, false, b.Args)
+func (q *Queue) SetupBinding(name string, b *Binding) error {
+	return q.deployment.channel.QueueBind(defName(q.Name, name), b.Key, b.Source, false, b.Args)
 }
 
-type ExchangeBinding QueueBinding
-
-func (b *ExchangeBinding) Setup(d *Deployment) error {
-	return d.channel.ExchangeBind(b.Destination, b.Key, b.Source, false, b.Args)
+func (x *Exchange) SetupBinding(name string, b *Binding) error {
+	return x.deplyment.channel.ExchangeBind(defName(x.Name, name), b.Key, b.Source, false, b.Args)
 }
 
 type Queue struct {
-	Name       string     `yaml:"name"`
-	Durable    bool       `yaml:"durable"`
-	AutoDelete bool       `yaml:"autoDelete"`
-	Args       amqp.Table `yaml:"args"`
+	Name       string              `yaml:"name"`
+	Durable    bool                `yaml:"durable"`
+	AutoDelete bool                `yaml:"autoDelete"`
+	Args       amqp.Table          `yaml:"args"`
+	Bindings   map[string]*Binding `yaml:"bindings"`
+
+	deployment *Deployment
 }
 
 func (q *Queue) Setup(name string, d *Deployment) error {
-	name = defName(q.Name, name)
+	q.deployment = d
+	if q.Name == "" {
+		q.Name = name
+	}
+
 	log.Print("Declare queue ", name)
 
 	err := q.setup(name, d)
@@ -148,6 +161,12 @@ func (q *Queue) Setup(name string, d *Deployment) error {
 		return err
 	}
 
+	for name, b := range q.Bindings {
+		if err := q.SetupBinding(name, b); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (q *Queue) setup(name string, d *Deployment) error {

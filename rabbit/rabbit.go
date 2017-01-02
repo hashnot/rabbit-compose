@@ -109,29 +109,24 @@ type AmqpObject interface {
 func (d *Deployment) DeclareWithRecover(o AmqpObject) error {
 	err := o.Declare()
 
+	log.Print("Error while creating queue", err, "Trying to recover")
 	switch err.(type) {
 	case *amqp.Error:
 		aerr := err.(*amqp.Error)
 		log.Printf("recover: %v", aerr.Recover)
 		switch aerr.Code {
 		case 406:
-			erropen := d.newChannel()
-			if erropen != nil {
-				log.Print("Error while creating queue ", err)
-				log.Print("Error while reopening channel: ", erropen)
+			if err := d.newChannel(); err != nil {
+				log.Print("Error while reopening channel: ", err)
 				return err
 			}
 
-			errdel := o.Delete()
-			if errdel != nil {
-				log.Print("Error while creating queue ", err)
-				log.Print("Error while deleting old queue: ", errdel)
+			if err := o.Delete(); err != nil {
+				log.Print("Error while deleting old queue: ", err)
 				return err
 			}
-			err2 := o.Declare()
-			if err2 != nil {
-				log.Print("Error while creating queue ", err)
-				log.Print("Error while recreating queue: ", err2)
+			if err := o.Declare(); err != nil {
+				log.Print("Error while recreating queue: ", err)
 			}
 			return nil
 		default:

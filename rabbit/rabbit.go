@@ -94,7 +94,7 @@ type QueueBinding struct {
 }
 
 func (b *QueueBinding) Setup(d *Deployment) error {
-	return d.channel.ExchangeBind(b.Destination, b.Key, b.Source, false, b.Args)
+	return d.channel.QueueBind(b.Destination, b.Key, b.Source, false, b.Args)
 }
 
 type ExchangeBinding QueueBinding

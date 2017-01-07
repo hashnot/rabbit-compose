@@ -8,7 +8,7 @@ import (
 type Queue struct {
 	Name       string
 	Durable    bool
-	AutoDelete bool                `yaml:"autoDelete"`
+	AutoDelete bool `yaml:"autoDelete"`
 	Args       amqp.Table
 	Bindings   map[string]Binding
 
@@ -54,7 +54,7 @@ func (q *Queue) Unbind() error {
 }
 
 func (q *Queue) Delete() error {
-	log.Print("Delete queue",q.Name)
+	log.Print("Delete queue", q.Name)
 	_, err := q.deployment.channel.QueueDelete(q.Name, true, true, false)
 	return err
 }

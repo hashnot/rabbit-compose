@@ -9,7 +9,7 @@ type Exchange struct {
 	Name       string
 	Kind       string
 	Durable    bool
-	AutoDelete bool                `yaml:"autoDelete"`
+	AutoDelete bool `yaml:"autoDelete"`
 	Internal   bool
 	Args       amqp.Table
 	Bindings   map[string]Binding

@@ -6,9 +6,9 @@ import (
 )
 
 type Deployment struct {
-	Url       string               `yaml:"url"`
-	Exchanges map[string]*Exchange `yaml:"exchanges"`
-	Queues    map[string]*Queue    `yaml:"queues"`
+	Url       string
+	Exchanges map[string]*Exchange
+	Queues    map[string]*Queue
 
 	connection *amqp.Connection
 	channel    *amqp.Channel
@@ -94,9 +94,9 @@ func defName(value, defaultValue string) string {
 }
 
 type Binding struct {
-	Key    string     `yaml:"key"`
-	Source string     `yaml:"source"`
-	Args   amqp.Table `yaml:"args"`
+	Key    string
+	Source string
+	Args   amqp.Table
 }
 
 type AmqpObject interface {
@@ -108,6 +108,10 @@ type AmqpObject interface {
 
 func (d *Deployment) DeclareWithRecover(o AmqpObject) error {
 	err := o.Declare()
+
+	if err == nil {
+		return nil
+	}
 
 	log.Print("Error while creating queue", err, "Trying to recover")
 	switch err.(type) {
@@ -135,6 +139,4 @@ func (d *Deployment) DeclareWithRecover(o AmqpObject) error {
 	default:
 		return err
 	}
-
-	return nil
 }

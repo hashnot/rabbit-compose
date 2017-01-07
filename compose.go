@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"github.com/hashnot/rabbit-compose/rabbit"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -8,7 +9,10 @@ import (
 )
 
 func main() {
-	configData, err := ioutil.ReadFile("rabbit-compose.yaml")
+	fileName := flag.String("f", "rabbit-compose.yaml", "rabbit-compose.yaml file")
+	flag.Parse()
+
+	configData, err := ioutil.ReadFile(*fileName)
 	failOnError(err, "Error reading config")
 
 	config := new(rabbit.Deployment)

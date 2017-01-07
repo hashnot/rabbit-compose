@@ -6,11 +6,11 @@ import (
 )
 
 type Queue struct {
-	Name       string              `yaml:"name"`
-	Durable    bool                `yaml:"durable"`
+	Name       string
+	Durable    bool
 	AutoDelete bool                `yaml:"autoDelete"`
-	Args       amqp.Table          `yaml:"args"`
-	Bindings   map[string]*Binding `yaml:"bindings"`
+	Args       amqp.Table
+	Bindings   map[string]Binding
 
 	deployment *Deployment
 }
@@ -34,15 +34,18 @@ func (q *Queue) Declare() error {
 
 func (q *Queue) Bind() error {
 	for name, b := range q.Bindings {
-		if err := q.SetupBinding(name, b); err != nil {
+		if err := q.SetupBinding(name, &b); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (q *Queue) SetupBinding(name string, b *Binding) error {
-	return q.deployment.channel.QueueBind(defName(q.Name, name), b.Key, b.Source, false, b.Args)
+func (q *Queue) SetupBinding(actName string, b *Binding) error {
+	xName := defName(b.Source, actName)
+	x := q.deployment.Exchanges[xName]
+	log.Print("Bind exchange ", x.Name, " to queue ", q.Name)
+	return q.deployment.channel.QueueBind(q.Name, b.Key, x.Name, false, b.Args)
 }
 
 func (q *Queue) Unbind() error {
@@ -51,6 +54,7 @@ func (q *Queue) Unbind() error {
 }
 
 func (q *Queue) Delete() error {
+	log.Print("Delete queue",q.Name)
 	_, err := q.deployment.channel.QueueDelete(q.Name, true, true, false)
 	return err
 }

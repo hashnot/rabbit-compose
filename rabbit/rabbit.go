@@ -109,6 +109,10 @@ type AmqpObject interface {
 func (d *Deployment) DeclareWithRecover(o AmqpObject) error {
 	err := o.Declare()
 
+	if err == nil {
+		return nil
+	}
+
 	log.Print("Error while creating queue", err, "Trying to recover")
 	switch err.(type) {
 	case *amqp.Error:
@@ -135,6 +139,4 @@ func (d *Deployment) DeclareWithRecover(o AmqpObject) error {
 	default:
 		return err
 	}
-
-	return nil
 }

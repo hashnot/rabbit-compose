@@ -1,8 +1,8 @@
 package rabbit
 
 import (
-	"log"
 	"github.com/streadway/amqp"
+	"log"
 )
 
 type Exchange struct {

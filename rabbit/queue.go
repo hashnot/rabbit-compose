@@ -1,8 +1,8 @@
 package rabbit
 
 import (
-	"log"
 	"github.com/streadway/amqp"
+	"log"
 )
 
 type Queue struct {
@@ -27,8 +27,8 @@ func (q *Queue) Declare() error {
 	queue, err := q.deployment.channel.QueueDeclare(q.Name, q.Durable, q.AutoDelete, false, false, q.Args)
 	if err == nil {
 		log.Printf("%s consumers: %d messages: %d", queue.Name, queue.Consumers, queue.Messages)
+		q.Name = queue.Name
 	}
-	q.Name = queue.Name
 	return err
 }
 

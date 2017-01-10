@@ -140,3 +140,8 @@ func (d *Deployment) DeclareWithRecover(o AmqpObject) error {
 		return err
 	}
 }
+
+func (d *Deployment) Close() error {
+	d.channel.Close()
+	return d.connection.Close()
+}

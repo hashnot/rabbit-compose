@@ -22,6 +22,7 @@ func main() {
 
 	err = config.Setup()
 	failOnError(err, "Error applying config")
+	config.Close()
 }
 
 func failOnError(err error, msg string) {
